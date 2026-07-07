@@ -7,3 +7,6 @@ categories_cache.json
 .mimocode/
 *.log
 .env
+*.egg-info/
+dist/
+build/
