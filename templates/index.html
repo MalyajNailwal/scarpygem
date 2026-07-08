@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeM Document Scraper</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+        h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.3rem; color: #f8fafc; }
+        .subtitle { color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem; }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.2rem;
+        }
+        .card-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+        }
+
+        .form-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 180px; }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            margin-bottom: 0.4rem;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 0.65rem 0.9rem;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #f1f5f9;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus { border-color: #3b82f6; }
+        input::placeholder { color: #475569; }
+
+        .btn {
+            padding: 0.7rem 1.8rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.8rem; }
+
+        .status-bar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .status-dot.idle { background: #475569; }
+        .status-dot.running { background: #f59e0b; animation: pulse 1.5s infinite; }
+        .status-dot.done { background: #10b981; }
+        .status-dot.error { background: #ef4444; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .status-text { font-size: 0.9rem; color: #cbd5e1; }
+
+        .progress-bar { width: 100%; height: 6px; background: #334155; border-radius: 3px; overflow: hidden; margin-bottom: 1rem; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #10b981); border-radius: 3px; transition: width 0.5s ease; width: 0%; }
+
+        .logs {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 0.8rem;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.78rem;
+            line-height: 1.6;
+            color: #94a3b8;
+        }
+        .logs .log-entry { padding: 0.1rem 0; }
+        .logs .log-entry::before { content: '>'; color: #3b82f6; margin-right: 0.5rem; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; padding: 0.6rem 0.8rem; border-bottom: 1px solid #334155; }
+        td { padding: 0.65rem 0.8rem; font-size: 0.85rem; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+        tr:hover td { background: #1e293b; }
+
+        .empty-state { text-align: center; padding: 2rem; color: #475569; font-size: 0.9rem; }
+        .hidden { display: none; }
+        .stats { display: flex; gap: 2rem; margin-bottom: 0.5rem; }
+        .stat { font-size: 0.85rem; color: #94a3b8; }
+        .stat strong { color: #f1f5f9; font-weight: 600; }
+
+        /* Flatpickr dark theme overrides */
+        .flatpickr-calendar { background: #1e293b; border: 1px solid #334155; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+        .flatpickr-day { color: #e2e8f0; border-radius: 6px; }
+        .flatpickr-day:hover { background: #334155; border-color: #334155; }
+        .flatpickr-day.selected { background: #3b82f6; border-color: #3b82f6; }
+        .flatpickr-months .flatpickr-month { color: #e2e8f0; }
+        .flatpickr-current-month .flatpickr-monthDropdown-months { background: #1e293b; color: #e2e8f0; }
+        .flatpickr-current-month input.cur-year { color: #e2e8f0; }
+        span.flatpickr-weekday { color: #94a3b8; }
+        .flatpickr-day.flatpickr-disabled { color: #475569; }
+        .flatpickr-day.today { border-color: #3b82f6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GeM Document Scraper</h1>
+        <p class="subtitle">Scrape and download contract documents from Government e-Marketplace</p>
+
+        <!-- Input Form -->
+        <div class="card">
+            <div class="card-title">Search Parameters</div>
+            <div class="form-row">
+                <div class="form-group" style="flex: 2;">
+                    <label>Category</label>
+                    <input type="text" id="category" placeholder="Start typing to search categories..." list="category-list" autocomplete="off">
+                    <datalist id="category-list"></datalist>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>From Date</label>
+                    <input type="text" id="from_date" placeholder="Select date...">
+                </div>
+                <div class="form-group">
+                    <label>To Date</label>
+                    <input type="text" id="to_date" placeholder="Select date...">
+                </div>
+                <div style="display:flex; align-items:flex-end;">
+                    <button class="btn btn-primary" id="startBtn" onclick="startScrape()">Start Scraping</button>
+                </div>
+            </div>
+            <div style="font-size:0.75rem; color:#64748b; margin-top:-0.3rem;">
+                Pick dates from the calendar. Wider range = more results.
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div class="card hidden" id="statusCard">
+            <div class="card-title">Progress</div>
+            <div class="status-bar">
+                <div class="status-dot idle" id="statusDot"></div>
+                <span class="status-text" id="statusText">Idle</span>
+            </div>
+            <div class="stats">
+                <span class="stat">Found: <strong id="foundCount">0</strong></span>
+                <span class="stat">Downloaded: <strong id="downloadedCount">0</strong></span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <!-- Logs -->
+        <div class="card hidden" id="logsCard">
+            <div class="card-title">Live Logs</div>
+            <div class="logs" id="logsContainer"></div>
+        </div>
+
+        <!-- Documents -->
+        <div class="card hidden" id="docsCard">
+            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Documents</span>
+                <button class="btn btn-success btn-sm hidden" id="downloadAllBtn" onclick="downloadAll()">Download All (ZIP)</button>
+            </div>
+            <div id="docsContent">
+                <div class="empty-state">No documents yet...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        let currentJobId = null;
+        let pollInterval = null;
+
+        // Initialize date pickers
+        flatpickr("#from_date", {
+            dateFormat: "d-m-Y",
+            maxDate: "today",
+            theme: "dark",
+            onChange: function() {}
+        });
+        flatpickr("#to_date", {
+            dateFormat: "d-m-Y",
+            maxDate: "today",
+            theme: "dark",
+            onChange: function() {}
+        });
+
+        function formatDate(dateStr) {
+            // flatpickr returns DD-MM-YYYY, convert to DD-MM-YYYY (already correct)
+            let m = dateStr.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+            if (m) return `${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}-${m[3]}`;
+            m = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+            if (m) return `${m[3].padStart(2,'0')}-${m[2].padStart(2,'0')}-${m[1]}`;
+            return null;
+        }
+
+        async function startScrape() {
+            const category = document.getElementById("category").value.trim();
+            let from_date = document.getElementById("from_date").value.trim();
+            let to_date = document.getElementById("to_date").value.trim();
+
+            if (!category) { alert("Please enter a category"); return; }
+            if (!from_date || !to_date) { alert("Please select both dates"); return; }
+
+            from_date = formatDate(from_date);
+            to_date = formatDate(to_date);
+            if (!from_date || !to_date) { alert("Invalid dates"); return; }
+
+            const btn = document.getElementById("startBtn");
+            btn.disabled = true;
+            btn.textContent = "Starting...";
+
+            try {
+                const res = await fetch("/scrape", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ category, from_date, to_date }),
+                });
+                const data = await res.json();
+
+                if (data.error) {
+                    alert(data.error);
+                    btn.disabled = false;
+                    btn.textContent = "Start Scraping";
+                    return;
+                }
+
+                currentJobId = data.job_id;
+                document.getElementById("statusCard").classList.remove("hidden");
+                document.getElementById("logsCard").classList.remove("hidden");
+                document.getElementById("docsCard").classList.remove("hidden");
+                pollStatus();
+            } catch (err) {
+                alert("Failed to start: " + err.message);
+                btn.disabled = false;
+                btn.textContent = "Start Scraping";
+            }
+        }
+
+        function pollStatus() {
+            if (pollInterval) clearInterval(pollInterval);
+            pollInterval = setInterval(async () => {
+                if (!currentJobId) return;
+                try {
+                    const res = await fetch(`/status/${currentJobId}`);
+                    const data = await res.json();
+                    updateUI(data);
+                    if (data.status === "done" || data.status === "error") {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                        const btn = document.getElementById("startBtn");
+                        btn.disabled = false;
+                        btn.textContent = "Start Scraping";
+                    }
+                } catch (err) {
+                    console.error("Poll error:", err);
+                }
+            }, 2000);
+        }
+
+        function updateUI(data) {
+            document.getElementById("statusDot").className = "status-dot " + data.status;
+            document.getElementById("statusText").textContent = data.message || data.status;
+            document.getElementById("foundCount").textContent = data.documents_found;
+            document.getElementById("downloadedCount").textContent = data.documents_downloaded;
+
+            const total = data.documents_found || 1;
+            const pct = Math.min(100, Math.round((data.documents_downloaded / total) * 100));
+            document.getElementById("progressFill").style.width = pct + "%";
+
+            const logsEl = document.getElementById("logsContainer");
+            logsEl.innerHTML = data.logs.map(l => `<div class="log-entry">${escHtml(l)}</div>`).join("");
+            logsEl.scrollTop = logsEl.scrollHeight;
+
+            if (data.downloaded_files && data.downloaded_files.length > 0) {
+                document.getElementById("downloadAllBtn").classList.remove("hidden");
+                let html = `<table><thead><tr><th>#</th><th>File</th><th>Action</th></tr></thead><tbody>`;
+                data.downloaded_files.forEach((f, i) => {
+                    html += `<tr>
+                        <td>${i + 1}</td>
+                        <td>${escHtml(f)}</td>
+                        <td><a href="/download/${currentJobId}/${encodeURIComponent(f)}" class="btn btn-success btn-sm">Download</a></td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+                document.getElementById("docsContent").innerHTML = html;
+            } else if (data.documents_found > 0 && data.status === "running") {
+                document.getElementById("docsContent").innerHTML =
+                    `<div class="empty-state">Downloading... ${data.documents_downloaded}/${data.documents_found}</div>`;
+            } else if (data.status === "done" && data.documents_found === 0) {
+                document.getElementById("docsContent").innerHTML =
+                    `<div class="empty-state">No documents found for this category/date range</div>`;
+            }
+        }
+
+        function downloadAll() {
+            if (!currentJobId) return;
+            window.location.href = `/download_all/${currentJobId}`;
+        }
+
+        function escHtml(s) {
+            const d = document.createElement("div");
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        // Load categories for autocomplete
+        (async () => {
+            try {
+                const res = await fetch("/categories");
+                const cats = await res.json();
+                const list = document.getElementById("category-list");
+                cats.forEach(c => {
+                    const opt = document.createElement("option");
+                    opt.value = c;
+                    list.appendChild(opt);
+                });
+            } catch (e) {}
+        })();
+    </script>
+</body>
+</html>
